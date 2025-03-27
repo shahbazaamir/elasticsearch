@@ -1008,9 +1008,9 @@ public class EsqlCapabilities {
         LOADING_NON_INDEXED_IP_FIELDS,
 
         /**
-         * Support for the RANDOM_SAMPLE command
+         * Support for the SAMPLE command
          */
-        RANDOM_SAMPLE(Build.current().isSnapshot());
+        SAMPLE(Build.current().isSnapshot());
 
         private final boolean enabled;
 
