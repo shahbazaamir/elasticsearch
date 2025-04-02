@@ -25,6 +25,7 @@ import org.apache.lucene.search.ScoreMode;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.ScorerSupplier;
 import org.apache.lucene.search.Weight;
+import org.elasticsearch.common.lucene.search.function.MinScoreScorer;
 import org.elasticsearch.search.rank.RankDoc;
 
 import java.io.IOException;
@@ -353,7 +354,22 @@ public class RankDocsQuery extends Query {
 
             @Override
             public ScorerSupplier scorerSupplier(LeafReaderContext context) throws IOException {
-                return combinedWeight.scorerSupplier(context);
+                ScorerSupplier supplier = combinedWeight.scorerSupplier(context);
+                if (minScore != DEFAULT_MIN_SCORE) {
+                    return new ScorerSupplier() {
+                        @Override
+                        public Scorer get(long leadCost) throws IOException {
+                            Scorer scorer = supplier.get(leadCost);
+                            return new MinScoreScorer(scorer, minScore);
+                        }
+
+                        @Override
+                        public long cost() {
+                            return supplier.cost();
+                        }
+                    };
+                }
+                return supplier;
             }
         };
     }
