@@ -56,7 +56,7 @@ public class RankDocsQueryBuilder extends AbstractQueryBuilder<RankDocsQueryBuil
             this.queryBuilders = null;
             this.onlyRankDocs = false;
         }
-        this.minScore = DEFAULT_MIN_SCORE;
+        this.minScore = in.getTransportVersion().onOrAfter(TransportVersions.RANK_DOCS_QUERY_MIN_SCORE) ? in.readFloat() : DEFAULT_MIN_SCORE;
     }
 
     @Override
@@ -96,6 +96,7 @@ public class RankDocsQueryBuilder extends AbstractQueryBuilder<RankDocsQueryBuil
         if (out.getTransportVersion().onOrAfter(TransportVersions.V_8_16_0)) {
             out.writeOptionalArray(StreamOutput::writeNamedWriteable, queryBuilders);
             out.writeBoolean(onlyRankDocs);
+            out.writeFloat(minScore);
         }
     }
 
