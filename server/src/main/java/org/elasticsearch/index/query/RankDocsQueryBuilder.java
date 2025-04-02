@@ -56,7 +56,7 @@ public class RankDocsQueryBuilder extends AbstractQueryBuilder<RankDocsQueryBuil
             this.queryBuilders = null;
             this.onlyRankDocs = false;
         }
-        this.minScore = in.readFloat();
+        this.minScore = DEFAULT_MIN_SCORE;
     }
 
     @Override

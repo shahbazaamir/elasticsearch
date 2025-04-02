@@ -9,7 +9,6 @@
 
 package org.elasticsearch.search.retriever.rankdoc;
 
-import static org.elasticsearch.index.query.RankDocsQueryBuilder.DEFAULT_MIN_SCORE;
 
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.LeafReaderContext;
@@ -34,6 +33,8 @@ import java.util.Comparator;
 import java.util.Objects;
 
 import static org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS;
+import static org.elasticsearch.index.query.RankDocsQueryBuilder.DEFAULT_MIN_SCORE;
+
 
 /**
  * A {@code RankDocsQuery} returns the top k documents in the order specified by the global doc IDs.
