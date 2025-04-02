@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;
+import static org.elasticsearch.index.query.RankDocsQueryBuilder.DEFAULT_MIN_SCORE;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertResponse;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.closeTo;
@@ -387,7 +388,8 @@ public class LinearRetrieverIT extends ESIntegTestCase {
                             ),
                             rankWindowSize,
                             new float[] { 2.0f, 1.0f },
-                            new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE }
+                            new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE },
+                            DEFAULT_MIN_SCORE
                         ),
                         null
                     ),
@@ -399,7 +401,8 @@ public class LinearRetrieverIT extends ESIntegTestCase {
                 ),
                 rankWindowSize,
                 new float[] { 1.0f, 100.0f },
-                new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE }
+                new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE },
+                DEFAULT_MIN_SCORE
             )
         );
 
@@ -566,7 +569,8 @@ public class LinearRetrieverIT extends ESIntegTestCase {
                 ),
                 rankWindowSize,
                 new float[] { 1, 5f },
-                new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE }
+                new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE },
+                DEFAULT_MIN_SCORE
             )
         );
         source.explain(true);
