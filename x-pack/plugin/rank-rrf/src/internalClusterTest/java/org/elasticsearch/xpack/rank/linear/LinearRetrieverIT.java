@@ -13,10 +13,17 @@ import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.TransportVersion;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.search.ClosePointInTimeRequest;
+import org.elasticsearch.action.search.OpenPointInTimeRequest;
+import org.elasticsearch.action.search.OpenPointInTimeResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.TransportClosePointInTimeAction;
+import org.elasticsearch.action.search.TransportOpenPointInTimeAction;
 import org.elasticsearch.client.internal.Client;
+import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.index.query.InnerHitBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -25,6 +32,7 @@ import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.builder.PointInTimeBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.collapse.CollapseBuilder;
 import org.elasticsearch.search.retriever.CompoundRetrieverBuilder;
@@ -59,9 +67,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.lessThan;
 
 @ESIntegTestCase.ClusterScope(minNumDataNodes = 2)
 public class LinearRetrieverIT extends ESIntegTestCase {
@@ -994,41 +1000,50 @@ public class LinearRetrieverIT extends ESIntegTestCase {
 
     public void testLinearRetrieverRankWindowSize() {
         final int rankWindowSize = 3;
-
         createTestDocuments(10);
-        SearchRequestBuilder searchRequestBuilder = client().prepareSearch(INDEX);
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-
-        StandardRetrieverBuilder retriever1 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
-        StandardRetrieverBuilder retriever2 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
-
-        LinearRetrieverBuilder linearRetriever = new LinearRetrieverBuilder(
-            List.of(
-                new CompoundRetrieverBuilder.RetrieverSource(retriever1, null),
-                new CompoundRetrieverBuilder.RetrieverSource(retriever2, null)
-            ),
-            rankWindowSize,
-            new float[] { 1.0f, 1.0f },
-            new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE },
-            0.0f
-        );
-
         try {
-            RetrieverBuilder rewrittenRetriever = linearRetriever.rewrite(
-                new QueryRewriteContext(XContentParserConfiguration.EMPTY, client(), System::currentTimeMillis)
-            );
-            rewrittenRetriever.extractToSearchSourceBuilder(searchSourceBuilder, false);
-            searchRequestBuilder.setSource(searchSourceBuilder);
+            OpenPointInTimeRequest pitRequest = new OpenPointInTimeRequest(INDEX);
+            pitRequest.keepAlive(TimeValue.timeValueMinutes(1));
+            OpenPointInTimeResponse pitResponse = client().execute(TransportOpenPointInTimeAction.TYPE, pitRequest).actionGet();
+            BytesReference pitId = pitResponse.getPointInTimeId();
 
-            var response = searchRequestBuilder.execute().actionGet();
-
-            assertThat(
-                "Number of hits should be limited by rank window size",
-                response.getHits().getHits().length,
-                equalTo(rankWindowSize)
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().pointInTimeBuilder(
+                new PointInTimeBuilder(pitId).setKeepAlive(TimeValue.timeValueMinutes(1))
             );
-        } catch (IOException e) {
-            fail("Failed to rewrite retriever: " + e.getMessage());
+
+            StandardRetrieverBuilder retriever1 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
+            StandardRetrieverBuilder retriever2 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
+
+            LinearRetrieverBuilder linearRetrieverBuilder = new LinearRetrieverBuilder(
+                List.of(
+                    new CompoundRetrieverBuilder.RetrieverSource(retriever1, null),
+                    new CompoundRetrieverBuilder.RetrieverSource(retriever2, null)
+                ),
+                rankWindowSize,
+                new float[] { 1.0f, 1.0f },
+                new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE },
+                0.0f
+            );
+
+            searchSourceBuilder.retriever(linearRetrieverBuilder);
+
+            SearchRequestBuilder searchRequestBuilder = client().prepareSearch().setSource(searchSourceBuilder);
+            ElasticsearchAssertions.assertResponse(searchRequestBuilder, response -> {
+                assertNotNull("PIT ID should be present", response.pointInTimeId());
+                assertNotNull("Hit count should be present", response.getHits().getTotalHits());
+                assertThat(
+                    "Number of hits should be limited by rank window size",
+                    response.getHits().getHits().length,
+                    equalTo(rankWindowSize)
+                );
+            });
+
+            ClosePointInTimeRequest closePitRequest = new ClosePointInTimeRequest(pitId);
+            client().execute(TransportClosePointInTimeAction.TYPE, closePitRequest).actionGet();
+
+            Thread.sleep(100);
+        } catch (Exception e) {
+            fail("Failed to execute search: " + e.getMessage());
         }
     }
 
