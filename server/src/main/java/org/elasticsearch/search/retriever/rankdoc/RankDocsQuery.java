@@ -9,7 +9,6 @@
 
 package org.elasticsearch.search.retriever.rankdoc;
 
-
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.search.BooleanClause;
@@ -35,7 +34,6 @@ import java.util.Objects;
 
 import static org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS;
 import static org.elasticsearch.index.query.RankDocsQueryBuilder.DEFAULT_MIN_SCORE;
-
 
 /**
  * A {@code RankDocsQuery} returns the top k documents in the order specified by the global doc IDs.
@@ -249,7 +247,14 @@ public class RankDocsQuery extends Query {
      * @param onlyRankDocs Whether the query should only match the provided rank docs
      * @param minScore     The minimum score threshold for documents to be included in total hits
      */
-    public RankDocsQuery(IndexReader reader, RankDoc[] rankDocs, Query[] sources, String[] queryNames, boolean onlyRankDocs, float minScore) {
+    public RankDocsQuery(
+        IndexReader reader,
+        RankDoc[] rankDocs,
+        Query[] sources,
+        String[] queryNames,
+        boolean onlyRankDocs,
+        float minScore
+    ) {
         assert sources.length == queryNames.length;
         // clone to avoid side-effect after sorting
         this.docs = rankDocs.clone();

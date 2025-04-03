@@ -107,7 +107,13 @@ public final class LinearRetrieverBuilder extends CompoundRetrieverBuilder<Linea
     }
 
     LinearRetrieverBuilder(List<RetrieverSource> innerRetrievers, int rankWindowSize) {
-        this(innerRetrievers, rankWindowSize, getDefaultWeight(innerRetrievers.size()), getDefaultNormalizers(innerRetrievers.size()), DEFAULT_MIN_SCORE);
+        this(
+            innerRetrievers,
+            rankWindowSize,
+            getDefaultWeight(innerRetrievers.size()),
+            getDefaultNormalizers(innerRetrievers.size()),
+            DEFAULT_MIN_SCORE
+        );
     }
 
     public LinearRetrieverBuilder(
@@ -188,9 +194,7 @@ public final class LinearRetrieverBuilder extends CompoundRetrieverBuilder<Linea
         if (minScore == DEFAULT_MIN_SCORE) {
             filteredResults = sortedResults;
         } else {
-            filteredResults = Arrays.stream(sortedResults)
-                .filter(doc -> doc.score >= minScore)
-                .toArray(LinearRankDoc[]::new);
+            filteredResults = Arrays.stream(sortedResults).filter(doc -> doc.score >= minScore).toArray(LinearRankDoc[]::new);
         }
         // trim the results if needed, otherwise each shard will always return `rank_window_size` results.
         LinearRankDoc[] topResults = new LinearRankDoc[Math.min(rankWindowSize, filteredResults.length)];
