@@ -143,6 +143,7 @@ public final class LinearRetrieverBuilder extends CompoundRetrieverBuilder<Linea
     @Override
     protected SearchSourceBuilder finalizeSourceBuilder(SearchSourceBuilder sourceBuilder) {
         sourceBuilder.trackScores(true);
+        sourceBuilder.trackTotalHits(true);
         return sourceBuilder;
     }
 
@@ -182,11 +183,15 @@ public final class LinearRetrieverBuilder extends CompoundRetrieverBuilder<Linea
         // sort the results based on the final score, tiebreaker based on smaller doc id
         LinearRankDoc[] sortedResults = docsToRankResults.values().toArray(LinearRankDoc[]::new);
         Arrays.sort(sortedResults);
-        // Filter documents below minScore, but handle the default case as well
-        LinearRankDoc[] filteredResults = Arrays.stream(sortedResults)
-                .filter(doc -> doc.score >= minScore || doc.score == DEFAULT_SCORE)
+        // Filter documents below minScore, with special handling for default minScore
+        LinearRankDoc[] filteredResults;
+        if (minScore == DEFAULT_MIN_SCORE) {
+            filteredResults = sortedResults;
+        } else {
+            filteredResults = Arrays.stream(sortedResults)
+                .filter(doc -> doc.score >= minScore)
                 .toArray(LinearRankDoc[]::new);
-        
+        }
         // trim the results if needed, otherwise each shard will always return `rank_window_size` results.
         LinearRankDoc[] topResults = new LinearRankDoc[Math.min(rankWindowSize, filteredResults.length)];
         for (int rank = 0; rank < topResults.length; ++rank) {
