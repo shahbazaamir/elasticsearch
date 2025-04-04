@@ -13,12 +13,10 @@ import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.TransportVersion;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.ClosePointInTimeRequest;
-import org.elasticsearch.action.search.ClosePointInTimeResponse;
 import org.elasticsearch.action.search.OpenPointInTimeRequest;
 import org.elasticsearch.action.search.OpenPointInTimeResponse;
-import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.TransportClosePointInTimeAction;
 import org.elasticsearch.action.search.TransportOpenPointInTimeAction;
 import org.elasticsearch.client.internal.Client;
@@ -60,7 +58,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertResponse;
@@ -69,7 +66,6 @@ import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.greaterThan;
 
 @ESIntegTestCase.ClusterScope(minNumDataNodes = 2)
 public class LinearRetrieverIT extends ESIntegTestCase {
@@ -953,8 +949,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             assertThat(resp.getHits().getHits().length, equalTo(3));
             assertThat(resp.getHits().getAt(0).getScore(), equalTo(30.0f));
             for (int i = 0; i < resp.getHits().getHits().length; i++) {
-                assertThat("Document at position " + i + " has score >= 10.0", 
-                    resp.getHits().getAt(i).getScore() >= 10.0f, equalTo(true));
+                assertThat("Document at position " + i + " has score >= 10.0", resp.getHits().getAt(i).getScore() >= 10.0f, equalTo(true));
             }
         });
     }
@@ -1009,7 +1004,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             assertThat(resp.getHits().getAt(3).getId(), equalTo("doc_4"));
             assertThat((double) resp.getHits().getAt(3).getScore(), closeTo(0.8f, 0.1f));
         });
-        
+
         source.retriever(
             new LinearRetrieverBuilder(
                 Arrays.asList(
@@ -1062,8 +1057,9 @@ public class LinearRetrieverIT extends ESIntegTestCase {
         createTestDocuments(10);
 
         try {
-            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                .pointInTimeBuilder(new PointInTimeBuilder(pitId).setKeepAlive(TimeValue.timeValueMinutes(1)));
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().pointInTimeBuilder(
+                new PointInTimeBuilder(pitId).setKeepAlive(TimeValue.timeValueMinutes(1))
+            );
 
             StandardRetrieverBuilder retriever1 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
             StandardRetrieverBuilder retriever2 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
@@ -1080,18 +1076,18 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             );
 
             searchSourceBuilder.retriever(linearRetrieverBuilder);
-            
+
             ElasticsearchAssertions.assertResponse(prepareSearchWithPIT(searchSourceBuilder), response -> {
                 assertNotNull("PIT ID should be present", response.pointInTimeId());
                 assertNotNull("Hit count should be present", response.getHits().getTotalHits());
-                
+
                 assertThat(
-                    "Number of hits should be limited by rank window size", 
+                    "Number of hits should be limited by rank window size",
                     response.getHits().getHits().length,
                     equalTo(rankWindowSize)
                 );
             });
-            
+
             Thread.sleep(100);
         } catch (Exception e) {
             fail("Failed to execute search: " + e.getMessage());
