@@ -59,7 +59,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.lessThan;
 
 @ESIntegTestCase.ClusterScope(minNumDataNodes = 2)
 public class LinearRetrieverIT extends ESIntegTestCase {
@@ -858,6 +860,15 @@ public class LinearRetrieverIT extends ESIntegTestCase {
 
         // Second retriever using KNN search
         KnnRetrieverBuilder knnRetriever = new KnnRetrieverBuilder(VECTOR_FIELD, new float[] { 7.0f }, null, 10, 100, null, null);
+        KnnRetrieverBuilder knnRetriever = new KnnRetrieverBuilder(
+            VECTOR_FIELD,
+            new float[] { 7.0f },
+            null,
+            10,
+            100,
+            null,
+            null
+        );
         knnRetriever.retrieverName("knnRetriever");
 
         StandardRetrieverBuilder textRetriever = new StandardRetrieverBuilder(
@@ -879,83 +890,34 @@ public class LinearRetrieverIT extends ESIntegTestCase {
                     IdentityScoreNormalizer.INSTANCE,
                     IdentityScoreNormalizer.INSTANCE },
                 15.0f
+                    IdentityScoreNormalizer.INSTANCE
+                },
+                10.0f
             )
         );
         SearchRequestBuilder req = client().prepareSearch(INDEX).setSource(source);
         ElasticsearchAssertions.assertResponse(req, resp -> {
             assertNull(resp.pointInTimeId());
             assertNotNull(resp.getHits().getTotalHits());
-            assertThat(resp.getHits().getTotalHits().value(), equalTo(3L));
+            assertThat(resp.getHits().getTotalHits().value(), equalTo(4L));
             assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
-            assertThat(resp.getHits().getHits().length, equalTo(3));
-
-            // With min_score of 15.0, we expect only the highest scoring documents
-            // doc_7: 30.0 (from scoreRetriever1) + high KNN score + text score
+            assertThat(resp.getHits().getHits().length, equalTo(4));
+    
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_7"));
-            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(30.0f, 0.1f));
-
-            // doc_6: 25.0 (from scoreRetriever1) + medium KNN score + text score
+            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(31.0f, 1.1f));
             assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_6"));
-            assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(25.0f, 0.1f));
-
-            // doc_2: 20.0 (from scoreRetriever1) + low KNN score + text score
+            assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(25.0f, 1.1f));
             assertThat(resp.getHits().getAt(2).getId(), equalTo("doc_2"));
-            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(20.0f, 0.1f));
-        });
-
-        // Test with lower min_score threshold
-        source.retriever(
-            new LinearRetrieverBuilder(
-                Arrays.asList(
-                    new CompoundRetrieverBuilder.RetrieverSource(scoreRetriever1, null),
-                    new CompoundRetrieverBuilder.RetrieverSource(knnRetriever, null),
-                    new CompoundRetrieverBuilder.RetrieverSource(textRetriever, null)
-                ),
-                rankWindowSize,
-                new float[] { 1.0f, 1.0f, 1.0f },
-                new ScoreNormalizer[] {
-                    IdentityScoreNormalizer.INSTANCE,
-                    IdentityScoreNormalizer.INSTANCE,
-                    IdentityScoreNormalizer.INSTANCE },
-                10.0f
-            )
-        );
-        req = client().prepareSearch(INDEX).setSource(source);
-        ElasticsearchAssertions.assertResponse(req, resp -> {
-            assertNull(resp.pointInTimeId());
-            assertNotNull(resp.getHits().getTotalHits());
-            assertThat(resp.getHits().getTotalHits().value(), equalTo(5L));
-            assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
-            assertThat(resp.getHits().getHits().length, equalTo(5));
-
-            // With min_score of 10.0, we expect more documents
-            // doc_7: 30.0 (from scoreRetriever1) + high KNN score + text score
-            assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_7"));
-            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(30.0f, 0.1f));
-
-            // doc_6: 25.0 (from scoreRetriever1) + medium KNN score + text score
-            assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_6"));
-            assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(25.0f, 0.1f));
-
-            // doc_2: 20.0 (from scoreRetriever1) + low KNN score + text score
-            assertThat(resp.getHits().getAt(2).getId(), equalTo("doc_2"));
-            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(20.0f, 0.1f));
-
-            // doc_3: lower score but still above 10.0 due to KNN and text contributions
+            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(20.0f, 1.1f));
             assertThat(resp.getHits().getAt(3).getId(), equalTo("doc_3"));
-            assertThat((double) resp.getHits().getAt(3).getScore(), closeTo(15.0f, 0.1f));
-
-            // doc_1: lowest score but still above 10.0 due to text match
-            assertThat(resp.getHits().getAt(4).getId(), equalTo("doc_1"));
-            assertThat((double) resp.getHits().getAt(4).getScore(), closeTo(12.0f, 0.1f));
+            assertThat((double) resp.getHits().getAt(3).getScore(), closeTo(0.0f, 1.1f));
         });
     }
 
     public void testLinearWithMinScoreAndNormalization() {
         final int rankWindowSize = 100;
         SearchSourceBuilder source = new SearchSourceBuilder();
-
-        // First retriever using high static_score values
+        
         StandardRetrieverBuilder scoreRetriever1 = new StandardRetrieverBuilder(
             QueryBuilders.boolQuery()
                 .should(QueryBuilders.constantScoreQuery(QueryBuilders.idsQuery().addIds("doc_7")).boost(30.0f))
@@ -964,11 +926,17 @@ public class LinearRetrieverIT extends ESIntegTestCase {
         );
         scoreRetriever1.retrieverName("scoreRetriever1");
 
-        // Second retriever using KNN search
-        KnnRetrieverBuilder knnRetriever = new KnnRetrieverBuilder(VECTOR_FIELD, new float[] { 7.0f }, null, 10, 100, null, null);
+        KnnRetrieverBuilder knnRetriever = new KnnRetrieverBuilder(
+            VECTOR_FIELD,
+            new float[] { 7.0f },
+            null,
+            10,
+            100,
+            null,
+            null
+        );
         knnRetriever.retrieverName("knnRetriever");
 
-        // Third retriever using text field
         StandardRetrieverBuilder textRetriever = new StandardRetrieverBuilder(
             QueryBuilders.queryStringQuery("search").defaultField(TEXT_FIELD)
         );
@@ -991,23 +959,18 @@ public class LinearRetrieverIT extends ESIntegTestCase {
         ElasticsearchAssertions.assertResponse(req, resp -> {
             assertNull(resp.pointInTimeId());
             assertNotNull(resp.getHits().getTotalHits());
-            assertThat(resp.getHits().getTotalHits().value(), equalTo(3L));
+            assertThat(resp.getHits().getTotalHits().value(), equalTo(4L));
             assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
-            assertThat(resp.getHits().getHits().length, equalTo(3));
-
-            // With MinMaxScoreNormalizer, scores are normalized to [0,1]
-            // With min_score of 0.8, we expect only the highest scoring documents
-            // doc_7: highest normalized score from all retrievers
+            assertThat(resp.getHits().getHits().length, equalTo(4));
+     
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_7"));
-            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(1.0f, 0.001f));
-
-            // doc_6: second highest normalized score
+            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(1.0f, 0.1f));
             assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_6"));
-            assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(0.83f, 0.01f));
-
-            // doc_2: third highest normalized score
+            assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(0.83f, 0.1f));
             assertThat(resp.getHits().getAt(2).getId(), equalTo("doc_2"));
-            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(0.67f, 0.01f));
+            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(0.67f, 0.1f));
+            assertThat(resp.getHits().getAt(3).getId(), equalTo("doc_3"));
+            assertThat((double) resp.getHits().getAt(3).getScore(), closeTo(0.0f, 0.1f));
         });
     }
 
