@@ -160,6 +160,9 @@ public final class LinearRetrieverBuilder extends CompoundRetrieverBuilder<Linea
         for (int result = 0; result < rankResults.size(); result++) {
             final ScoreNormalizer normalizer = normalizers[result] == null ? IdentityScoreNormalizer.INSTANCE : normalizers[result];
             ScoreDoc[] originalScoreDocs = rankResults.get(result);
+            if (originalScoreDocs == null) {
+                continue;
+            }
             ScoreDoc[] normalizedScoreDocs = normalizer.normalizeScores(originalScoreDocs);
             for (int scoreDocIndex = 0; scoreDocIndex < normalizedScoreDocs.length; scoreDocIndex++) {
                 LinearRankDoc rankDoc = docsToRankResults.computeIfAbsent(
