@@ -997,11 +997,17 @@ public class LinearRetrieverIT extends ESIntegTestCase {
         ElasticsearchAssertions.assertResponse(req, resp -> {
             assertNotNull(resp.pointInTimeId());
             assertNotNull(resp.getHits().getTotalHits());
-            assertThat(resp.getHits().getTotalHits().value(), equalTo(1L));
+            assertThat(resp.getHits().getTotalHits().value(), equalTo(4L));
             assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
-            assertThat(resp.getHits().getHits().length, equalTo(1));
+            assertThat(resp.getHits().getHits().length, equalTo(4));
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_2"));
-            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(1.0f, 0.001f));
+            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(1.9f, 0.1f));
+            assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_1"));
+            assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(1.0f, 0.1f));
+            assertThat(resp.getHits().getAt(2).getId(), equalTo("doc_6"));
+            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(0.95f, 0.1f));
+            assertThat(resp.getHits().getAt(3).getId(), equalTo("doc_4"));
+            assertThat((double) resp.getHits().getAt(3).getScore(), closeTo(0.8f, 0.1f));
         });
         
         source.retriever(
@@ -1022,13 +1028,13 @@ public class LinearRetrieverIT extends ESIntegTestCase {
         ElasticsearchAssertions.assertResponse(req, resp -> {
             assertNotNull(resp.pointInTimeId());
             assertNotNull(resp.getHits().getTotalHits());
-            assertThat(resp.getHits().getHits().length, greaterThan(1));
+            assertThat(resp.getHits().getHits().length, equalTo(3));
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_2"));
-            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(1.0f, 0.001f));
-            for (int i = 0; i < resp.getHits().getHits().length; i++) {
-                assertThat("Document at position " + i + " has normalized score >= 0.5", 
-                    resp.getHits().getAt(i).getScore() >= 0.5f, equalTo(true));
-            }
+            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(1.9f, 0.1f));
+            assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_1"));
+            assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(1.0f, 0.1f));
+            assertThat(resp.getHits().getAt(2).getId(), equalTo("doc_6"));
+            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(0.95f, 0.1f));
         });
     }
 
