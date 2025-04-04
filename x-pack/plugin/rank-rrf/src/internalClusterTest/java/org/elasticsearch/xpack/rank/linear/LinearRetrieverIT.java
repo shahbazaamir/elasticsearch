@@ -1010,10 +1010,8 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().pointInTimeBuilder(
                 new PointInTimeBuilder(pitId).setKeepAlive(TimeValue.timeValueMinutes(1))
             );
-
             StandardRetrieverBuilder retriever1 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
             StandardRetrieverBuilder retriever2 = new StandardRetrieverBuilder(QueryBuilders.matchAllQuery());
-
             LinearRetrieverBuilder linearRetrieverBuilder = new LinearRetrieverBuilder(
                 List.of(
                     new CompoundRetrieverBuilder.RetrieverSource(retriever1, null),
@@ -1024,7 +1022,6 @@ public class LinearRetrieverIT extends ESIntegTestCase {
                 new ScoreNormalizer[] { IdentityScoreNormalizer.INSTANCE, IdentityScoreNormalizer.INSTANCE },
                 0.0f
             );
-
             searchSourceBuilder.retriever(linearRetrieverBuilder);
 
             SearchRequestBuilder searchRequestBuilder = client().prepareSearch().setSource(searchSourceBuilder);
@@ -1037,10 +1034,8 @@ public class LinearRetrieverIT extends ESIntegTestCase {
                     equalTo(rankWindowSize)
                 );
             });
-
             ClosePointInTimeRequest closePitRequest = new ClosePointInTimeRequest(pitId);
             client().execute(TransportClosePointInTimeAction.TYPE, closePitRequest).actionGet();
-
             Thread.sleep(100);
         } catch (Exception e) {
             fail("Failed to execute search: " + e.getMessage());
