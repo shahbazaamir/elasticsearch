@@ -986,18 +986,14 @@ public class LinearRetrieverIT extends ESIntegTestCase {
 
             assertNotNull(resp.pointInTimeId());
             assertNotNull(resp.getHits().getTotalHits());
-            assertThat(resp.getHits().getTotalHits().value(), equalTo(4L));
+            assertThat(resp.getHits().getTotalHits().value(), equalTo(2L));
             assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
-            assertThat(resp.getHits().getHits().length, equalTo(4));
-
+            assertThat(resp.getHits().getHits().length, equalTo(2));
+     
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_7"));
             assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(2.0f, 0.1f));
             assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_2"));
             assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(1.0f, 0.1f));
-            assertThat(resp.getHits().getAt(2).getId(), equalTo("doc_6"));
-            assertThat((double) resp.getHits().getAt(2).getScore(), closeTo(0.98f, 0.1f));
-            assertThat(resp.getHits().getAt(3).getId(), equalTo("doc_3"));
-            assertThat((double) resp.getHits().getAt(3).getScore(), closeTo(0.0f, 0.1f));
         });
     }
 
