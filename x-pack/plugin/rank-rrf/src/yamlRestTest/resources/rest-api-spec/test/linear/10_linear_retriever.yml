@@ -1178,7 +1178,7 @@ setup:
 ---
 "linear retriever with negative min_score should throw error":
   - do:
-      catch: /Input \[-1.0\] is not valid for min_score/
+      catch: "/\\[min_score\\] must be greater than 0, was: -1\\.0/"
       search:
         index: test
         body:
