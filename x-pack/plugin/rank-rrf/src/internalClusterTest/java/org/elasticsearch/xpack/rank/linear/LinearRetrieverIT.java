@@ -27,7 +27,6 @@ import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.index.query.InnerHitBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryRewriteContext;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -37,7 +36,6 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.collapse.CollapseBuilder;
 import org.elasticsearch.search.retriever.CompoundRetrieverBuilder;
 import org.elasticsearch.search.retriever.KnnRetrieverBuilder;
-import org.elasticsearch.search.retriever.RetrieverBuilder;
 import org.elasticsearch.search.retriever.StandardRetrieverBuilder;
 import org.elasticsearch.search.retriever.TestRetrieverBuilder;
 import org.elasticsearch.search.sort.FieldSortBuilder;
@@ -48,7 +46,6 @@ import org.elasticsearch.search.vectors.TestQueryVectorBuilderPlugin;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.test.hamcrest.ElasticsearchAssertions;
 import org.elasticsearch.xcontent.XContentBuilder;
-import org.elasticsearch.xcontent.XContentParserConfiguration;
 import org.elasticsearch.xcontent.XContentType;
 import org.elasticsearch.xpack.rank.rrf.RRFRankPlugin;
 import org.junit.After;
@@ -59,8 +56,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;
 import static org.elasticsearch.index.query.RankDocsQueryBuilder.DEFAULT_MIN_SCORE;
@@ -79,7 +76,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
     protected static final String TEXT_FIELD = "text";
     protected static final String VECTOR_FIELD = "vector";
     protected static final String TOPIC_FIELD = "topic";
-    
+
     private BytesReference pitId;
 
     @Override
@@ -94,15 +91,12 @@ public class LinearRetrieverIT extends ESIntegTestCase {
         OpenPointInTimeResponse openResp = client().execute(TransportOpenPointInTimeAction.TYPE, openRequest).actionGet();
         pitId = openResp.getPointInTimeId();
     }
-    
+
     @After
     public void cleanup() {
         if (pitId != null) {
             try {
-                client().execute(
-                    TransportClosePointInTimeAction.TYPE,
-                    new ClosePointInTimeRequest(pitId)
-                ).actionGet(30, TimeUnit.SECONDS);
+                client().execute(TransportClosePointInTimeAction.TYPE, new ClosePointInTimeRequest(pitId)).actionGet(30, TimeUnit.SECONDS);
                 logger.info("Closed PIT successfully");
                 pitId = null;
             } catch (Exception e) {
@@ -884,7 +878,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
     public void testLinearWithMinScore() {
         final int rankWindowSize = 100;
         SearchSourceBuilder source = new SearchSourceBuilder();
-        
+
         StandardRetrieverBuilder scoreRetriever1 = new StandardRetrieverBuilder(
             QueryBuilders.boolQuery()
                 .should(QueryBuilders.constantScoreQuery(QueryBuilders.idsQuery().addIds("doc_7")).boost(30.0f))
@@ -922,10 +916,9 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             System.out.println("Number of hits returned: " + resp.getHits().getHits().length);
             System.out.println("Hits details:");
             for (int i = 0; i < resp.getHits().getHits().length; i++) {
-                System.out.println(String.format("Hit %d: id=%s, score=%f", 
-                    i, 
-                    resp.getHits().getAt(i).getId(),
-                    resp.getHits().getAt(i).getScore()));
+                System.out.println(
+                    String.format("Hit %d: id=%s, score=%f", i, resp.getHits().getAt(i).getId(), resp.getHits().getAt(i).getScore())
+                );
             }
             System.out.println("=== End Debug ===");
 
@@ -934,7 +927,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             assertThat(resp.getHits().getTotalHits().value(), equalTo(3L));
             assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
             assertThat(resp.getHits().getHits().length, equalTo(3));
-     
+
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_7"));
             assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(30.0f, 0.1f));
             assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_6"));
@@ -947,7 +940,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
     public void testLinearWithMinScoreAndNormalization() {
         final int rankWindowSize = 100;
         SearchSourceBuilder source = new SearchSourceBuilder();
-        
+
         StandardRetrieverBuilder scoreRetriever1 = new StandardRetrieverBuilder(
             QueryBuilders.boolQuery()
                 .should(QueryBuilders.constantScoreQuery(QueryBuilders.idsQuery().addIds("doc_7")).boost(30.0f))
@@ -985,10 +978,9 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             System.out.println("Number of hits returned: " + resp.getHits().getHits().length);
             System.out.println("Hits details:");
             for (int i = 0; i < resp.getHits().getHits().length; i++) {
-                System.out.println(String.format("Hit %d: id=%s, score=%f", 
-                    i, 
-                    resp.getHits().getAt(i).getId(),
-                    resp.getHits().getAt(i).getScore()));
+                System.out.println(
+                    String.format("Hit %d: id=%s, score=%f", i, resp.getHits().getAt(i).getId(), resp.getHits().getAt(i).getScore())
+                );
             }
             System.out.println("=== End Debug ===");
 
@@ -997,9 +989,9 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             assertThat(resp.getHits().getTotalHits().value(), equalTo(4L));
             assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
             assertThat(resp.getHits().getHits().length, equalTo(4));
-     
+
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_7"));
-            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(2.0f, 0.1f)); 
+            assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(2.0f, 0.1f));
             assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_2"));
             assertThat((double) resp.getHits().getAt(1).getScore(), closeTo(1.0f, 0.1f));
             assertThat(resp.getHits().getAt(2).getId(), equalTo("doc_6"));
@@ -1030,7 +1022,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
     public void testLinearRetrieverRankWindowSize() {
         final int rankWindowSize = 2;
         SearchSourceBuilder source = new SearchSourceBuilder();
-        
+
         StandardRetrieverBuilder scoreRetriever1 = new StandardRetrieverBuilder(
             QueryBuilders.boolQuery()
                 .should(QueryBuilders.constantScoreQuery(QueryBuilders.idsQuery().addIds("doc_7")).boost(30.0f))
@@ -1068,10 +1060,9 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             System.out.println("Number of hits returned: " + resp.getHits().getHits().length);
             System.out.println("Hits details:");
             for (int i = 0; i < resp.getHits().getHits().length; i++) {
-                System.out.println(String.format("Hit %d: id=%s, score=%f", 
-                    i, 
-                    resp.getHits().getAt(i).getId(),
-                    resp.getHits().getAt(i).getScore()));
+                System.out.println(
+                    String.format("Hit %d: id=%s, score=%f", i, resp.getHits().getAt(i).getId(), resp.getHits().getAt(i).getScore())
+                );
             }
             System.out.println("=== End Debug ===");
 
@@ -1080,7 +1071,7 @@ public class LinearRetrieverIT extends ESIntegTestCase {
             assertThat(resp.getHits().getTotalHits().value(), equalTo(3L));
             assertThat(resp.getHits().getTotalHits().relation(), equalTo(TotalHits.Relation.EQUAL_TO));
             assertThat(resp.getHits().getHits().length, equalTo(rankWindowSize));
-     
+
             assertThat(resp.getHits().getAt(0).getId(), equalTo("doc_7"));
             assertThat((double) resp.getHits().getAt(0).getScore(), closeTo(30.0f, 0.1f));
             assertThat(resp.getHits().getAt(1).getId(), equalTo("doc_6"));
