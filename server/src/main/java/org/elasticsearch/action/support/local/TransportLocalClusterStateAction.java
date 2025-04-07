@@ -127,7 +127,7 @@ public abstract class TransportLocalClusterStateAction<Request extends LocalClus
             @Override
             public void onTimeout(TimeValue timeout) {
                 logger.debug(() -> format("timed out while retrying [%s] after failure (timeout [%s])", actionName, timeout), exception);
-                final var timeoutException = initialState.nodes().getMasterNode() == null
+                final var timeoutException = initialState.nodes().getMasterNode() == null && request.waitForMaster()
                     ? new MasterNotDiscoveredException()
                     : new ElasticsearchTimeoutException("timed out while waiting for cluster to unblock", exception);
                 listener.onFailure(timeoutException);

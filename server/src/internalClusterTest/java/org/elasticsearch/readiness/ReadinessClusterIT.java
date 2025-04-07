@@ -204,6 +204,8 @@ public class ReadinessClusterIT extends ESIntegTestCase {
         internalCluster().restartNode(masterNode, new InternalTestCluster.RestartCallback() {
             @Override
             public Settings onNodeStopped(String nodeName) throws Exception {
+                assertBusy(() -> expectMasterNotFound());
+
                 logger.info("--> master node [{}] stopped", nodeName);
 
                 for (String dataNode : dataNodes) {
@@ -307,7 +309,7 @@ public class ReadinessClusterIT extends ESIntegTestCase {
         logger.info("--> stop master node");
         Settings masterDataPathSettings = internalCluster().dataPathSettings(internalCluster().getMasterName());
         internalCluster().stopCurrentMasterNode();
-        expectMasterNotFound();
+        assertBusy(() -> expectMasterNotFound());
 
         logger.info("--> write bad file settings before restarting master node");
         writeFileSettings(testErrorJSON);
