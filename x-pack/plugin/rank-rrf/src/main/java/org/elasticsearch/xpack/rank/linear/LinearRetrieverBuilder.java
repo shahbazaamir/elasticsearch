@@ -197,7 +197,13 @@ public final class LinearRetrieverBuilder extends CompoundRetrieverBuilder<Linea
         if (minScore == DEFAULT_MIN_SCORE) {
             filteredResults = sortedResults;
         } else {
-            filteredResults = Arrays.stream(sortedResults).filter(doc -> doc.score >= minScore).toArray(LinearRankDoc[]::new);
+            filteredResults = Arrays.stream(sortedResults)
+                .filter(doc -> {
+                    // Ensure we're comparing against the final combined score
+                    float finalScore = doc.score;
+                    return finalScore >= minScore;
+                })
+                .toArray(LinearRankDoc[]::new);
         }
         // trim the results if needed, otherwise each shard will always return `rank_window_size` results.
         LinearRankDoc[] topResults = new LinearRankDoc[Math.min(rankWindowSize, filteredResults.length)];
@@ -205,6 +211,7 @@ public final class LinearRetrieverBuilder extends CompoundRetrieverBuilder<Linea
             topResults[rank] = filteredResults[rank];
             topResults[rank].rank = rank + 1;
         }
+        System.out.println("topResults: " + topResults.length);
         return topResults;
     }
 
